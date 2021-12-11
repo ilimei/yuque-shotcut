@@ -353,11 +353,15 @@ input.keyboard-record {
             // 记录应该testid和新的hash
             RecordChange[originTestId] = recordHash;
             input.parentNode.innerHTML = recordKeys.map(v => `<kbd>${v}</kbd>`).join('<span>+</span>');
-            // 存储当前的记录值
-            save2Store();
         } else {
-            input.parentNode.remove(input);
+            if (RecordChange[originTestId]) {
+                delete HashReplaceMap[RecordChange[originTestId]];
+                delete RecordChange[originTestId];
+            }
+            input.parentNode.innerHTML = hash2keys(originHash).map(v => `<kbd>${v}</kbd>`).join('<span>+</span>');
         }
+        // 存储当前的记录值
+        save2Store();
         recordKeys = undefined;
         recordHash = undefined;
         originTestId = undefined;
@@ -379,38 +383,48 @@ input.keyboard-record {
     };
 
     document.body.addEventListener('click', e => {
-        // 没有点击过 则点击之后修改ui
-        if (!hasShowShotkey && e.target.closest('#siteTipGuide')) {
-            hasShowShotkey = true;
-            setTimeout(() => {
-                Object.keys(RecordChange).forEach(key => {
-                    const dom = document.querySelector(`.hotkey-item div[data-testid="${key}"]`);
-                    if (dom) {
-                        dom.innerHTML = hash2keys(RecordChange[key]).map(v => `<kbd>${v}</kbd>`).join('<span>+</span>');
-                    }
-                });
-            }, 100);
-            return;
-        }
-        // 判断是否点击在快捷键设置上
-        const hotKeyBindDOM = e.target.closest('div[data-testid]');
-        if (hotKeyBindDOM && hotKeyBindDOM.closest('.hotkey-item')) {
-            // 记录哪些ui需要修改
-            originTestId = hotKeyBindDOM.dataset['testid'];
-            // 如果已经记录了原始hash值则直接使用, 未记录则重新生成
-            if (hotKeyBindDOM.dataset.hash) {
-                originHash = Number(hotKeyBindDOM.dataset.hash);
-            } else {
-                // 生成原来的hash值
-                const keys = [];
-                // 将快捷键记录的内容转成key数组
-                hotKeyBindDOM.querySelectorAll('kbd').forEach(e => keys.push(e.textContent));
-                originHash = keys2hash(keys);
-                hotKeyBindDOM.dataset.hash = originHash;
+        try {
+            // 没有点击过 则点击之后修改ui
+            if (!hasShowShotkey && e.target.closest('#siteTipGuide')) {
+                hasShowShotkey = true;
+                setTimeout(() => {
+                    Object.keys(RecordChange).forEach(key => {
+                        const dom = document.querySelector(`.hotkey-item div[data-testid="${key}"]`);
+                        if (dom) {
+                            // 生成原来的hash值
+                            const keys = [];
+                            // 将快捷键记录的内容转成key数组
+                            dom.querySelectorAll('kbd').forEach(e => keys.push(e.textContent));
+                            // 将原来的快捷键hash绑定上
+                            dom.dataset.hash = keys2hash(keys);
+                            dom.innerHTML = hash2keys(RecordChange[key]).map(v => `<kbd>${v}</kbd>`).join('<span>+</span>');
+                        }
+                    });
+                }, 100);
+                return;
             }
-            // 插入input 让用户输入新的快捷键
-            hotKeyBindDOM.appendChild(input);
-            input.focus();
+            // 判断是否点击在快捷键设置上
+            const hotKeyBindDOM = e.target.closest('div[data-testid]');
+            if (hotKeyBindDOM && hotKeyBindDOM.closest('.hotkey-item')) {
+                // 记录哪些ui需要修改
+                originTestId = hotKeyBindDOM.dataset['testid'];
+                // 如果已经记录了原始hash值则直接使用, 未记录则重新生成
+                if (hotKeyBindDOM.dataset.hash) {
+                    originHash = Number(hotKeyBindDOM.dataset.hash);
+                } else {
+                    // 生成原来的hash值
+                    const keys = [];
+                    // 将快捷键记录的内容转成key数组
+                    hotKeyBindDOM.querySelectorAll('kbd').forEach(e => keys.push(e.textContent));
+                    originHash = keys2hash(keys);
+                    hotKeyBindDOM.dataset.hash = originHash;
+                }
+                // 插入input 让用户输入新的快捷键
+                hotKeyBindDOM.appendChild(input);
+                input.focus();
+            }
+        } catch (e) {
+
         }
     });
 })();
